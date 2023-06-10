@@ -1,19 +1,34 @@
-from flask import *
-import json, time
+from flask import Flask
+from flask import request
+from flask import jsonify
+import time
 import mysql.connector
-from dbconfig import DB_CONFIG
 
 app = Flask(__name__)
 
+# Konfigurasi db
+db_config = {
+    "username": "judahdasuki",
+    "password": "joshuaM@rt1n!",
+    "host": "judahdasuki.mysql.pythonanywhere-services.com",
+    "database": "judahdasuki$database_article",
+}
+
 # Fungsi untuk mendapatkan koneksi ke database
 def get_db_connection():
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = mysql.connector.connect(**db_config)
     return conn
+
+
+# index
+@app.route("/")
+def index():
+    return "Haloo, selamat datang di article api."
 
 
 # /article/ ['POST']
 # Create article
-@app.route('/article/', methods=['POST'])
+@app.route("/article/", methods=["POST"])
 def create_article():
     try:
         # Open connection to db
@@ -21,25 +36,31 @@ def create_article():
         cursor = conn.cursor()
 
         # Ambil data dari argument
-        title = str(request.args.get('title'))
-        content = str(request.args.get('content'))
-        category = str(request.args.get('category'))
-        created_date = time.time()
-        updated_date = time.time()
-        status = str(request.args.get('status'))
+        title = str(request.args.get("title"))
+        content = str(request.args.get("content"))
+        category = str(request.args.get("category"))
+        status = str(request.args.get("status"))
+
+        # Memvalidasi input dari user
+        isValidate = sanity_check(
+            {"title": title, "content": content, "category": category, "status": status}
+        )
+
+        if isValidate["status"] == False:
+            return jsonify({"message": isValidate["message"]})
 
         # Buat query untuk tambah data ke db
-        query = 'INSERT INTO `posts`(`id`, `title`, `content`, `category`, `created_date`, `updated_date`, `status`) VALUES ('',%s,%s,%s,%s,%s,%s)'
-        cursor.execute(query, (title, content, category, created_date, updated_date, status))
+        query = "INSERT INTO posts (`Title`, `Content`, `Category`, `Status`) VALUES (%s,%s,%s,%s)"
+        cursor.execute(query, (title, content, category, status))
         conn.commit()
 
         # Close connection from db
         cursor.close()
         conn.close()
 
-        return jsonify({'message': 'Artikel berhasil dibuat'})
+        return jsonify({"message": "Artikel berhasil dibuat!"})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 # /article/<limit>/<offset>
@@ -127,22 +148,33 @@ def update_article(id):
         cursor = conn.cursor()
 
         # Ambil data artikel dari argument
-        title = str(request.args.get('title'))
-        content = str(request.args.get('content'))
-        category = str(request.args.get('category'))
-        updated_date = time.time()
-        status = str(request.args.get('status'))
+        title = str(request.args.get("title"))
+        content = str(request.args.get("content"))
+        category = str(request.args.get("category"))
+        status = str(request.args.get("status"))
+
+        # Memvalidasi input dari user
+        isValidate = sanity_check(
+            {"title": title, "content": content, "category": category, "status": status}
+        )
+
+        if isValidate["status"] == False:
+            return jsonify({"message": isValidate["message"]})
 
         # Query update artikel di db
-        query = 'UPDATE `posts` SET `title`=%s,`content`=%s,`category`=%s,`updated_date`=%s,`status`=%s WHERE id = %s'
-        cursor.execute(query, (title, content, category, updated_date, status, id))
+        query = (
+            "UPDATE posts SET `Title` = %s, `Content` = %s,`Category`= %s, `Updated_date` = CURRENT_TIMESTAMP,`Status`= %s WHERE Id = %s"
+        )
+        cursor.execute(query, (title, content, category, status, id))
         conn.commit()
 
         # Close koneksi dari db
         cursor.close()
         conn.close()
+
+        return jsonify({"message": "Artikel berhasil diubah!"})
     except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        return jsonify({"message": str(e)}), 500
 
 
 # /article/<id>
@@ -155,7 +187,7 @@ def delete_article(id):
         cursor = conn.cursor()
 
         # Query untuk hapus data di db
-        query = f'DELETE FROM `posts` WHERE id = {id}'
+        query = f"DELETE FROM `posts` WHERE Id = {id}"
         cursor.execute(query)
         conn.commit()
 
@@ -163,9 +195,33 @@ def delete_article(id):
         cursor.close()
         conn.close()
 
-        return jsonify({'message': 'Berhasil menghapus artikel'})
+        return jsonify({"message": "Berhasil menghapus artikel"})
     except Exception as e:
-        return jsonify({'message': str(e)}), 500
+        return jsonify({"message": str(e)}), 500
+
+
+# Memvalidasi input dari user
+def sanity_check(data):
+    title, content, category, status = data.values()
+
+    if len(title) < 20:
+        return {"status": False, "message": "Judul kurang dari 20 karakter"}
+
+    if len(content) < 200:
+        return {"status": False, "message": "Konten kurang dari 20 karakter"}
+
+    if len(category) < 3:
+        return {"status": False, "message": "Kategori kurang dari 20 karakter"}
+
+    list_status = ["publish", "draft", "thrash"]
+
+    if status not in list_status:
+        return {
+            "status": False,
+            "message": "Status bukan antara publish, draft, thrash",
+        }
+
+    return {"status": True, "message": "Pengecekan berhasil dilakukan."}
 
 
 if __name__ == "__main__":
