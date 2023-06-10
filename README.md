@@ -161,7 +161,7 @@ Content-Type: application/json
   "message": "Berhasil menghapus artikel"
 }
 ```
-<br>
+
 ### Kesalahan / Error
 Jika terjadi kesalahan dalam permintaan, respon akan berisi pesan kesalahan (exception) yang sesuai.
 <br><br>
