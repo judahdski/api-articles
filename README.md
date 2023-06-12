@@ -33,6 +33,10 @@ Content-Type: application/json
 }
 ```
 
+### POST /articles
+
+Mengambil semua artikel.
+
 ### GET /articles/\<limit\>/\<offset\>
 
 Mengambil semua artikel dengan batasan jumlah dan offset yang ditentukan.
